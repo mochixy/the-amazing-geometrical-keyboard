@@ -53,8 +53,67 @@ body{
 
 main{
   position:relative; z-index:1;
-  max-width:1060px; margin:0 auto; padding:26px 18px 48px;
-  display:flex; flex-direction:column; gap:16px;
+  max-width:1060px; margin:0 auto; padding:22px 12px 40px;
+  display:flex; flex-direction:column; gap:14px;
+}
+.hidden{ display:none !important; }
+
+/* Toggle animations for controls */
+.ctl-toggle{
+  overflow:hidden;
+  transition: max-width .4s cubic-bezier(.4,0,.2,1),
+              opacity .3s ease,
+              transform .35s cubic-bezier(.4,0,.2,1),
+              margin .4s cubic-bezier(.4,0,.2,1),
+              padding .4s cubic-bezier(.4,0,.2,1);
+  max-width:400px; opacity:1; transform:scale(1) translateY(0);
+}
+.ctl-toggle.out{
+  max-width:0 !important; opacity:0;
+  transform:scale(0.7) translateY(-10px);
+  margin:0 !important; padding:0 !important;
+  pointer-events:none;
+}
+.ctl-toggle.pop-in{
+  animation: popIn 5s cubic-bezier(.175,.885,.32,1.275) forwards;
+}
+@keyframes popIn{
+  0%  { max-width:0; opacity:0; transform:scale(0.3) translateY(12px); }
+  50% { opacity:0.7; }
+  100%{ max-width:400px; opacity:1; transform:scale(1) translateY(0); }
+}
+.btn-toggle{
+  transition: opacity .3s ease,
+              transform .35s cubic-bezier(.4,0,.2,1),
+              max-width .35s cubic-bezier(.4,0,.2,1),
+              margin .35s ease,
+              padding .35s ease;
+  max-width:200px; opacity:1; transform:scale(1) translateY(0);
+  overflow:hidden; white-space:nowrap;
+}
+.btn-toggle.out{
+  max-width:0 !important; opacity:0;
+  transform:scale(0.5) translateY(-8px);
+  margin:0 !important; padding:0 !important;
+  pointer-events:none; border-color:transparent !important;
+}
+.btn-toggle.pop-in{
+  animation: btnPopIn 5s cubic-bezier(.175,.885,.32,1.275) forwards;
+}
+@keyframes btnPopIn{
+  0%  { max-width:0; opacity:0; transform:scale(0.3) translateY(10px); }
+  60% { opacity:0.8; transform:scale(1.08); }
+  100%{ max-width:200px; opacity:1; transform:scale(1) translateY(0); }
+}
+@media (max-width:600px){
+  main{ padding:14px 6px 28px; gap:10px; }
+  header h1{ font-size:14px; letter-spacing:.18em; }
+  #txt{ font-size:14px; padding:10px 12px; }
+  .seg button{ padding:6px 8px; font-size:10px; }
+  .btn{ padding:8px 12px; font-size:10px; letter-spacing:.14em; }
+  .slider-ctl{ min-width:140px; }
+  #speed, #zscale{ width:100px; }
+  .text-overlay{ font-size:18px; }
 }
 header h1{
   font-family:var(--font-disp);
@@ -64,9 +123,38 @@ header h1{
   text-shadow: 0 0 14px rgba(0,242,254,.45), 0 0 42px rgba(155,81,224,.35);
 }
 
-.input-wrap{ display:flex; justify-content:center; }
+.dash{
+  display:flex; flex-direction:column; gap:10px;
+  align-items:center;
+}
+.dash-row{
+  display:flex; flex-wrap:wrap; gap:10px;
+  align-items:center; justify-content:center;
+  width:100%;
+}
+.dash-row #txt{
+  flex:1; min-width:0;
+}
+.dash-settings{
+  display:flex; flex-direction:column; gap:10px;
+  align-items:center; width:100%;
+  overflow:hidden;
+  transition: max-height .5s cubic-bezier(.4,0,.2,1),
+              opacity .4s ease;
+  max-height:500px; opacity:1;
+}
+.dash-settings.out{
+  max-height:0; opacity:0; pointer-events:none;
+}
+.dash-settings.pop-in{
+  animation: settingsIn 5s cubic-bezier(.175,.885,.32,1.275) forwards;
+}
+@keyframes settingsIn{
+  0%  { max-height:0; opacity:0; }
+  40% { opacity:0.5; }
+  100%{ max-height:500px; opacity:1; }
+}
 #txt{
-  width:min(680px, 100%);
   background: rgba(10,12,20,.75);
   border:1px solid var(--line);
   border-radius:10px;
@@ -84,15 +172,6 @@ header h1{
   box-shadow: 0 0 18px rgba(0,242,254,.28), inset 0 0 22px rgba(0,174,255,.08);
 }
 
-.dash{
-  display:flex; flex-wrap:wrap; gap:12px;
-  align-items:center; justify-content:center;
-  background: var(--panel);
-  border:1px solid rgba(0,174,255,.14);
-  border-radius:14px;
-  padding:12px 16px;
-  backdrop-filter: blur(6px);
-}
 .ctl-label{
   font-size:10px; letter-spacing:.24em; color:var(--text-dim);
   text-transform:uppercase; display:block; margin-bottom:5px; text-align:center;
@@ -200,6 +279,39 @@ header h1{
 #btnFade:hover{ color:var(--cyan); border-color:var(--line-hi); }
 #btnFade.on{ color:var(--cyan); border-color:var(--line-hi);
   box-shadow: inset 0 0 12px rgba(0,242,254,.1); }
+#btnQueue{
+  background:transparent; color:var(--text-dim);
+  border:1px solid rgba(0,174,255,.25);
+  font-size:11px; padding:9px 14px;
+}
+#btnQueue:hover{ color:var(--cyan); border-color:var(--line-hi); }
+#btnQueue.on{ color:var(--cyan); border-color:var(--line-hi);
+  box-shadow: inset 0 0 12px rgba(0,242,254,.1); }
+
+/* Queue counter */
+.queue-counter{
+  display:none;
+  text-align:center;
+  padding:6px 0 2px;
+  font-family:var(--font-disp); font-size:13px;
+  letter-spacing:.18em; color:var(--purple);
+  text-shadow: 0 0 8px rgba(155,81,224,.4);
+}
+.queue-counter.visible{ display:block; }
+.queue-counter .q-current{
+  color:var(--cyan);
+  font-size:16px;
+}
+.queue-counter .q-total{
+  color:var(--text-dim);
+}
+.queue-counter .q-hint{
+  display:block;
+  font-family:var(--font-ui);
+  font-size:10px; letter-spacing:.2em;
+  color:var(--text-dim);
+  margin-top:2px;
+}
 
 /* Fade-out effect after animation completes */
 .workspace.faded .key{
@@ -238,15 +350,12 @@ body.hide-keys .bg-grid{ opacity:0; }
 
 .workspace{
   position:relative;
-  border:1px solid rgba(0,174,255,.14);
-  border-radius:16px;
-  background: rgba(12,14,24,.5);
-  overflow:hidden;
+  border-radius:8px;
+  overflow:visible;
 }
 .stage-scale{
   transform-origin: top center;
   display:flex; justify-content:center;
-  transition: opacity .3s ease;
   padding-top:0;
 }
 .stage{ position:relative; }
@@ -274,11 +383,11 @@ body.hide-keys .bg-grid{ opacity:0; }
 #stage3d{
   position:absolute; inset:0; z-index:5;
   opacity:0; pointer-events:none;
-  transition: opacity .3s ease;
+  overflow:hidden;
+  border-radius:8px;
   background: radial-gradient(ellipse at 50% 20%, #171a2b 0%, #0d0e17 70%);
 }
-.workspace.mode3d #stage3d{ opacity:1; pointer-events:auto; }
-.workspace.mode3d .stage-scale{ opacity:0; }
+.workspace.mode3d #stage3d{ pointer-events:auto; }
 .ctl-3d{
   position:absolute; top:14px; right:16px; z-index:10;
   background: rgba(12,14,24,.75);
@@ -298,46 +407,50 @@ body.hide-keys .bg-grid{ opacity:0; }
     <h1>The Amazing Geometrical Keyboard</h1>
   </header>
 
-  <div class="input-wrap">
-    <input id="txt" type="text" spellcheck="false" autocomplete="off"
-           placeholder="Type or paste here..." aria-label="Text to trace" />
-  </div>
-
-  <div class="dash">
-    <div class="ctl">
-      <span class="ctl-label">Spacebar Mode</span>
-      <div class="seg" id="segSpace" role="group" aria-label="Spacebar mode">
-        <button type="button" data-v="anchor" class="on">Anchor</button>
-        <button type="button" data-v="split">Split</button>
-        <button type="button" data-v="linked">Linked</button>
-      </div>
+  <div class="dash" id="dashAll">
+    <div class="dash-row">
+      <input id="txt" type="text" spellcheck="false" autocomplete="off"
+             placeholder="Type or paste here..." aria-label="Text to trace" />
+      <button class="btn" id="btnGen">Generate</button>
     </div>
 
-    <div class="ctl">
-      <span class="ctl-label">Coloring Mode</span>
-      <div class="seg" id="segColor" role="group" aria-label="Coloring mode">
-        <button type="button" data-v="fixed" class="on">Fixed Scale</button>
-        <button type="button" data-v="growth">Growth Scale</button>
-        <button type="button" data-v="white">Pure White</button>
+    <div class="dash-settings" id="dashSettings">
+      <div class="dash-row">
+        <div class="ctl ctl-toggle" id="ctlColor">
+          <span class="ctl-label">Coloring Mode</span>
+          <div class="seg" id="segColor" role="group" aria-label="Coloring mode">
+            <button type="button" data-v="fixed" class="on">Fixed Scale</button>
+            <button type="button" data-v="growth">Growth Scale</button>
+            <button type="button" data-v="white">Pure White</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="dash-row">
+        <div class="ctl slider-ctl">
+          <span class="ctl-label">Drawing Speed</span>
+          <div class="slider-row">
+            <input type="range" id="speed" min="1" max="31" step="1" value="15" aria-label="Drawing speed" />
+            <input type="text" id="speedVal" value="15" aria-label="Speed value" />
+          </div>
+        </div>
+      </div>
+
+      <div class="dash-row">
+        <button class="btn" id="btnKb">Hide Keys</button>
+        <button class="btn" id="btnTxt">Show Text</button>
+        <button class="btn" id="btnFade">Fade</button>
+        <button class="btn" id="btnQueue">Queue</button>
+      </div>
+
+      <div class="dash-row">
+        <button class="btn btn-toggle" id="btn3d" data-toggleable>View in 3D</button>
       </div>
     </div>
-
-    <div class="ctl slider-ctl">
-      <span class="ctl-label">Drawing Speed</span>
-      <div class="slider-row">
-        <input type="range" id="speed" min="1" max="31" step="1" value="15" aria-label="Drawing speed" />
-        <input type="text" id="speedVal" value="15" aria-label="Speed value" />
-      </div>
-    </div>
-
-    <button class="btn" id="btnGen">Generate</button>
-    <button class="btn" id="btn3d">View in 3D</button>
-    <button class="btn" id="btnKb">Hide Keys</button>
-    <button class="btn" id="btnTxt">Show Text</button>
-    <button class="btn" id="btnFade">Fade</button>
   </div>
 
   <div class="workspace" id="workspace">
+    <div class="queue-counter" id="queueCounter"></div>
     <div class="text-overlay" id="textOverlay"></div>
     <div class="stage-scale" id="stageScale">
       <div class="stage" id="stage"><canvas id="cv"></canvas></div>
@@ -554,13 +667,17 @@ function draw2D() {
   ctx.clearRect(0, 0, STAGE_W, STAGE_H);
   if (!flatPoints.length) return;
   const den = colorDenominator();
+  const vt = state.viewTrans;              // 0 = normal 2D, grows toward 1
+  const bloomW = lerp(6, 14, vt);          // bloom stroke thickens
+  const coreW  = lerp(3, 7, vt);           // core line thickens
+  const dotR   = lerp(3.5, 6, vt);         // dot radius grows
 
   /* Pass 1 — bloom under-glow (single stroke, heavy shadow) */
   const isWhite = state.coloring === "white";
   ctx.save();
-  ctx.lineWidth = 6; ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.lineWidth = bloomW; ctx.lineCap = "round"; ctx.lineJoin = "round";
   ctx.shadowColor = isWhite ? "#FFFFFF" : "#FF007F";
-  ctx.shadowBlur = 15;
+  ctx.shadowBlur = lerp(15, 28, vt);
   ctx.strokeStyle = isWhite ? "rgba(255,255,255,0.30)" : "rgba(255,0,127,0.30)";
   ctx.beginPath();
   forVisible(progress, (a, b) => {
@@ -571,12 +688,12 @@ function draw2D() {
   ctx.restore();
 
   /* Pass 2 — gradient core, chunked for smooth blending */
-  ctx.lineWidth = 3; ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.lineWidth = coreW; ctx.lineCap = "round"; ctx.lineJoin = "round";
   let tip = null;
   forVisible(progress, (a, b, d1, d2) => {
     if (!b) {
       ctx.fillStyle = gradCSS(d1 / den);
-      ctx.beginPath(); ctx.arc(a.x, a.y, 3.5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(a.x, a.y, dotR, 0, Math.PI * 2); ctx.fill();
       tip = a; return;
     }
     const segLen = d2 - d1;
@@ -676,10 +793,6 @@ function init3D() {
   /* Reference floor — grouped for hide-keys toggle */
   const kbGroup = new THREE.Group();
   scene.add(kbGroup);
-
-  const grid = new THREE.GridHelper(34, 34, 0x28477a, 0x18233c);
-  grid.position.y = -0.02;
-  kbGroup.add(grid);
 
   /* Flat keyboard reference plane at Z = 0 (world floor) */
   const kbMat = new THREE.LineBasicMaterial({ color: 0x2fa8ff, transparent: true, opacity: 0.4 });
@@ -804,17 +917,71 @@ const state = {
   view3d: false,
   zFactor: 1.0,          // 3D height compression/extension multiplier
   zLift: 0,              // 0 = flat (2D), 1 = fully raised (3D) — animated
-  zLiftTarget: 0         // animation target
+  zLiftTarget: 0,        // animation target
+  viewTrans: 0,          // 0 = 2D, 1 = 3D crossfade complete
+  viewTransTarget: 0     // animation target for crossfade
 };
 
 const $ = id => document.getElementById(id);
 const workspace = $("workspace");
 let dirty = false;
 
+/* Queue mode */
+let queueEnabled = false;
+let queueWords = [];
+let queueIdx = 0;
+
+function updateQueueCounter() {}
+
+function drawWord(word) {
+  removeFade();
+  state.text = word;
+  if (!word) { subpaths = []; flatPoints = []; totalLen = 0; $("textOverlay").innerHTML = ""; dirty = true; return; }
+  buildPath(word, state.spaceMode);
+  buildTextOverlay();
+  progress = 0; flashIdx = 0;
+
+  if (Number($("speed").value) >= 31) {
+    progress = totalLen;
+    animating = false;
+    fireFlashes();
+    if (fadeEnabled) setTimeout(applyFade, 500);
+  } else {
+    animating = true;
+  }
+  dirty = true;
+  if (three) three.lastBuilt = -1;
+}
+
+function generate() {
+  const raw = $("txt").value;
+  if (queueEnabled && raw.trim()) {
+    queueWords = raw.trim().split(/\s+/);
+    queueIdx = 0;
+    updateQueueCounter();
+    drawWord(queueWords[0]);
+  } else {
+    queueWords = []; queueIdx = 0;
+    updateQueueCounter();
+    drawWord(raw);
+  }
+}
+
+function queueNext() {
+  if (!queueEnabled || queueWords.length <= 1) return false;
+  if (queueIdx < queueWords.length - 1) {
+    queueIdx++;
+  } else {
+    queueIdx = 0; // loop back to start
+  }
+  updateQueueCounter();
+  drawWord(queueWords[queueIdx]);
+  return true;
+}
+
 function speedPxPerSec() {
   const s = Number($("speed").value);
-  if (s >= 31) return Infinity;        // INSTANT
-  // Base speed 60 px/s at level 1, each step 1.25× faster
+  if (s >= 31) return Infinity;
   return 60 * Math.pow(1.25, s - 1);
 }
 
@@ -832,26 +999,6 @@ function buildTextOverlay() {
   }
 }
 
-function generate() {
-  removeFade();
-  state.text = $("txt").value;
-  if (!state.text) { subpaths = []; flatPoints = []; totalLen = 0; $("textOverlay").innerHTML = ""; dirty = true; return; }
-  buildPath(state.text, state.spaceMode);
-  buildTextOverlay();
-  progress = 0; flashIdx = 0;
-
-  if (Number($("speed").value) >= 31) {
-    progress = totalLen;
-    animating = false;
-    fireFlashes();
-    if (fadeEnabled) setTimeout(applyFade, 500);
-  } else {
-    animating = true;
-  }
-  dirty = true;
-  if (three) three.lastBuilt = -1;
-}
-
 /* Segmented controls */
 function wireSeg(id, onPick) {
   const seg = $(id);
@@ -862,7 +1009,6 @@ function wireSeg(id, onPick) {
     onPick(b.dataset.v);
   });
 }
-wireSeg("segSpace", v => { state.spaceMode = v; });
 wireSeg("segColor", v => { state.coloring = v; dirty = true; if (three) three.lastBuilt = -1; });
 
 /* Speed — two-way sync between slider and editable number input */
@@ -892,7 +1038,25 @@ syncSpeedDisplay(Number($("speed").value));
 
 $("btnGen").addEventListener("click", generate);
 $("txt").addEventListener("keydown", e => {
-  if (e.key === "Enter") { e.preventDefault(); generate(); }
+  if (e.key === "Enter") {
+    e.preventDefault();
+    // If queue is active and we already generated, advance to next word
+    if (queueEnabled && queueWords.length > 1 && !animating) {
+      queueNext();
+    } else {
+      generate();
+    }
+  }
+});
+
+/* Queue toggle */
+$("btnQueue").addEventListener("click", () => {
+  queueEnabled = !queueEnabled;
+  $("btnQueue").classList.toggle("on", queueEnabled);
+  if (!queueEnabled) {
+    queueWords = []; queueIdx = 0;
+    updateQueueCounter();
+  }
 });
 $("btn3d").addEventListener("click", () => {
   state.view3d = !state.view3d;
@@ -900,15 +1064,17 @@ $("btn3d").addEventListener("click", () => {
   $("btn3d").textContent = state.view3d ? "View in 2D" : "View in 3D";
 
   if (state.view3d) {
-    // Show 3D view immediately, start flat, animate up
+    // Show 3D container immediately (flat), start crossfade
     workspace.classList.add("mode3d");
     resize3D();
     state.zLift = 0;
     state.zLiftTarget = 1;
+    state.viewTransTarget = 1;
     if (three) three.lastBuilt = -1;
   } else {
-    // Animate down to flat, then hide 3D view when done
+    // Animate height down, then crossfade back to 2D
     state.zLiftTarget = 0;
+    state.viewTransTarget = 0;
   }
   dirty = true;
 });
@@ -995,16 +1161,23 @@ $("zscaleVal").addEventListener("keydown", e => {
 /* Responsive stage scaling */
 function layout() {
   const avail = workspace.clientWidth - 8;
-  const scale = Math.min(1, avail / STAGE_W);
-  $("stageScale").style.transform = `scale(${scale})`;
-  workspace.style.height = Math.round(STAGE_H * scale) + "px";
+  layout._baseScale = Math.min(1, avail / STAGE_W);
+  const zoomScale = lerp(1.0, 0.82, state.viewTrans);
+  $("stageScale").style.transform = `scale(${layout._baseScale * zoomScale})`;
+  workspace.style.minHeight = Math.round(STAGE_H * layout._baseScale) + "px";
+  workspace.style.height = "auto";
   resize3D();
 }
+layout._baseScale = 1;
 window.addEventListener("resize", layout);
 
 /* Master animation loop */
 let lastTs = performance.now();
-const LIFT_SPEED = 1.2; // full lift in ~0.8 seconds
+const LIFT_SPEED = 1.2;        // full lift in ~0.8s
+const CROSSFADE_SPEED = 2.5;   // full crossfade in ~0.4s
+const stageScale = $("stageScale");
+const stage3d = $("stage3d");
+
 function loop(ts) {
   requestAnimationFrame(loop);
   const dt = Math.min(0.05, (ts - lastTs) / 1000);
@@ -1021,31 +1194,79 @@ function loop(ts) {
     dirty = true;
   }
 
-  /* Animate zLift toward target */
-  if (Math.abs(state.zLift - state.zLiftTarget) > 0.001) {
-    const dir = state.zLiftTarget > state.zLift ? 1 : -1;
-    state.zLift += dir * LIFT_SPEED * dt;
-    // Clamp
-    if (dir > 0 && state.zLift > state.zLiftTarget) state.zLift = state.zLiftTarget;
-    if (dir < 0 && state.zLift < state.zLiftTarget) state.zLift = state.zLiftTarget;
-    if (three) three.lastBuilt = -1;
+  /* Animate viewTrans (2D↔3D crossfade) */
+  if (Math.abs(state.viewTrans - state.viewTransTarget) > 0.001) {
+    const dir = state.viewTransTarget > state.viewTrans ? 1 : -1;
+    state.viewTrans += dir * CROSSFADE_SPEED * dt;
+    if (dir > 0 && state.viewTrans > state.viewTransTarget) state.viewTrans = state.viewTransTarget;
+    if (dir < 0 && state.viewTrans < state.viewTransTarget) state.viewTrans = state.viewTransTarget;
     dirty = true;
-    // When collapsing back to 2D and fully flat, hide 3D view
-    if (state.zLiftTarget === 0 && state.zLift <= 0.001) {
-      state.zLift = 0;
+
+    // Apply zoom-out to 2D stage
+    const zoomScale = lerp(1.0, 0.82, state.viewTrans);
+    stageScale.style.transform = `scale(${layout._baseScale * zoomScale})`;
+    stageScale.style.opacity = 1 - state.viewTrans;
+
+    // 3D container opacity
+    stage3d.style.opacity = state.viewTrans;
+
+    // When fully back to 2D, clean up
+    if (state.viewTransTarget === 0 && state.viewTrans <= 0.001) {
+      state.viewTrans = 0;
       if (!state.view3d) workspace.classList.remove("mode3d");
     }
   }
 
-  if (dirty && !state.view3d && state.zLift <= 0.001) draw2D();
+  /* Animate zLift — only start lifting AFTER crossfade is mostly done */
+  const canLift = state.viewTrans > 0.85 || state.zLiftTarget === 0;
+  if (canLift && Math.abs(state.zLift - state.zLiftTarget) > 0.001) {
+    const dir = state.zLiftTarget > state.zLift ? 1 : -1;
+    state.zLift += dir * LIFT_SPEED * dt;
+    if (dir > 0 && state.zLift > state.zLiftTarget) state.zLift = state.zLiftTarget;
+    if (dir < 0 && state.zLift < state.zLiftTarget) state.zLift = state.zLiftTarget;
+    if (three) three.lastBuilt = -1;
+    dirty = true;
+  }
 
-  if ((state.view3d || state.zLift > 0.001) && three) {
+  /* Render 2D when visible */
+  if (dirty && state.viewTrans < 0.99) draw2D();
+
+  /* Render 3D when visible */
+  if (state.viewTrans > 0.01 && three) {
     if (dirty || three.lastBuilt !== progress) rebuild3D();
     three.controls.update();
     three.renderer.render(three.scene, three.camera);
   }
   dirty = false;
 }
+
+/* Keyboard shortcuts — animated toggle with C, 3, S */
+function animToggle(el) {
+  if (el.classList.contains("out")) {
+    el.classList.remove("out");
+    el.classList.add("pop-in");
+    el.addEventListener("animationend", () => el.classList.remove("pop-in"), { once: true });
+  } else {
+    el.classList.remove("pop-in");
+    el.classList.add("out");
+  }
+}
+
+document.addEventListener("keydown", e => {
+  if (document.activeElement === $("txt") ||
+      document.activeElement === $("speedVal") ||
+      document.activeElement === $("zscaleVal")) return;
+
+  if (e.key.toLowerCase() === "c") {
+    animToggle($("ctlColor"));
+  }
+  if (e.key === "3") {
+    animToggle($("btn3d"));
+  }
+  if (e.key.toLowerCase() === "s") {
+    animToggle($("dashSettings"));
+  }
+});
 
 /* Boot */
 buildKeyboardDOM();
