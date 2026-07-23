@@ -54,7 +54,7 @@ body{
 main{
   position:relative; z-index:1;
   max-width:1060px; margin:0 auto; padding:22px 12px 40px;
-  display:flex; flex-direction:column; gap:14px;
+  display:flex; flex-direction:column; gap:18px;
 }
 .hidden{ display:none !important; }
 
@@ -287,6 +287,54 @@ header h1{
 #btnQueue:hover{ color:var(--cyan); border-color:var(--line-hi); }
 #btnQueue.on{ color:var(--cyan); border-color:var(--line-hi);
   box-shadow: inset 0 0 12px rgba(0,242,254,.1); }
+#btnStl{
+  background:transparent; color:var(--text-dim);
+  border:1px solid rgba(0,174,255,.25);
+  font-size:11px; padding:9px 14px;
+}
+#btnStl:hover{ color:var(--cyan); border-color:var(--line-hi); }
+#btnFrameFull, #btnFrameKb{
+  background:transparent; color:var(--text-dim);
+  border:1px solid rgba(0,174,255,.25);
+  font-size:11px; padding:9px 14px;
+}
+#btnFrameFull:hover, #btnFrameKb:hover{ color:var(--cyan); border-color:var(--line-hi); }
+#btnFrameFull.on, #btnFrameKb.on{ color:var(--cyan); border-color:var(--line-hi);
+  box-shadow: inset 0 0 12px rgba(0,242,254,.1); }
+
+/* 16:9 frame overlays */
+.frame-overlay{
+  display:none;
+  border:2px solid rgba(255,255,255,.35);
+  border-radius:4px;
+  pointer-events:none;
+}
+.frame-overlay.visible{ display:block; }
+.frame-overlay::before{
+  content:'';
+  position:absolute;
+  top:-1px; left:-1px; right:-1px; bottom:-1px;
+  border:1px dashed rgba(255,255,255,.15);
+  border-radius:4px;
+}
+.frame-overlay::after{
+  position:absolute;
+  font-family:var(--font-disp);
+  font-size:9px;
+  letter-spacing:.2em;
+  color:rgba(255,255,255,.4);
+  top:6px; right:8px;
+}
+.frame-full{
+  position:fixed; z-index:100;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,.45);
+}
+.frame-full::after{ content:'16:9 FULL'; }
+.frame-kb{
+  position:absolute; z-index:20;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,.35);
+}
+.frame-kb::after{ content:'16:9 KEYBOARD'; }
 
 /* Queue counter */
 .queue-counter{
@@ -313,12 +361,9 @@ header h1{
   margin-top:2px;
 }
 
-/* Fade-out effect after animation completes */
+/* Fade-out effect after animation completes (keys + grid only, not text) */
 .workspace.faded .key{
   opacity:0 !important; transition: opacity 1.2s ease !important;
-}
-.workspace.faded .text-overlay{
-  opacity:0; transition: opacity 1.2s ease;
 }
 body.faded .bg-grid{
   opacity:0; transition: opacity 1.2s ease;
@@ -344,14 +389,22 @@ body.faded .bg-grid{
 }
 .text-overlay .char.show{ opacity:1; }
 
-/* Hide keyboard keys + background grid */
+/* Hide keyboard keys + background grid (but keep text overlay) */
 .workspace.hide-keys .key{ opacity:0; pointer-events:none; }
 body.hide-keys .bg-grid{ opacity:0; }
+.workspace.hide-keys .text-overlay{ opacity:1; }
 
 .workspace{
   position:relative;
   border-radius:8px;
   overflow:visible;
+  padding-top:10px;
+  padding-bottom:10px;
+  transition: padding .3s ease;
+}
+.workspace.frame-kb-active{
+  padding-top:160px;
+  padding-bottom:60px;
 }
 .stage-scale{
   transform-origin: top center;
@@ -401,6 +454,7 @@ body.hide-keys .bg-grid{ opacity:0; }
 <body>
 
 <div class="bg-grid" aria-hidden="true"></div>
+<div class="frame-overlay frame-full" id="frameFull"></div>
 
 <main>
   <header>
@@ -445,11 +499,15 @@ body.hide-keys .bg-grid{ opacity:0; }
 
       <div class="dash-row">
         <button class="btn btn-toggle" id="btn3d" data-toggleable>View in 3D</button>
+        <button class="btn" id="btnStl">Export STL</button>
+        <button class="btn" id="btnFrameFull">Frame: Full</button>
+        <button class="btn" id="btnFrameKb">Frame: Keyboard</button>
       </div>
     </div>
   </div>
 
   <div class="workspace" id="workspace">
+    <div class="frame-overlay frame-kb" id="frameKb"></div>
     <div class="queue-counter" id="queueCounter"></div>
     <div class="text-overlay" id="textOverlay"></div>
     <div class="stage-scale" id="stageScale">
@@ -908,6 +966,168 @@ function rebuild3D() {
 }
 
 /* ----------------------------------------------------------------
+   5b. STL EXPORT
+   Builds tube geometry from the current path and exports binary STL.
+   Works for both 2D (flat, zLift=0) and 3D (current zLift).
+   ---------------------------------------------------------------- */
+function buildExportTubes(forceZLift) {
+  // Temporarily override zLift for export
+  const savedLift = state.zLift;
+  state.zLift = forceZLift;
+
+  const TUBE_R = 0.2;
+  const RADIAL = 12;
+  const geometries = [];
+
+  // Ensure full path is used (not mid-animation)
+  const exportProgress = totalLen;
+
+  const subVis = [];
+  let cursor = null;
+  forVisible(exportProgress, (a, b, d0, d1) => {
+    if (!b) { subVis.push({ pts: [toWorld(a)], dists: [d0] }); cursor = null; return; }
+    if (!cursor || cursor.lastD !== d0 || cursor.lastPt.distanceTo(toWorld(a)) > 1e-4) {
+      cursor = { pts: [toWorld(a), toWorld(b)], dists: [d0, d1],
+                 lastD: d1, lastPt: toWorld(b) };
+      subVis.push(cursor);
+    } else {
+      cursor.pts.push(toWorld(b)); cursor.dists.push(d1);
+      cursor.lastD = d1; cursor.lastPt = toWorld(b);
+    }
+  });
+
+  for (const sv of subVis) {
+    const { pts } = sv;
+    if (pts.length < 2) {
+      // Isolated point → small sphere
+      const sg = new THREE.SphereGeometry(TUBE_R, RADIAL, RADIAL);
+      sg.translate(pts[0].x, pts[0].y, pts[0].z);
+      geometries.push(sg);
+      continue;
+    }
+    const path = new THREE.CurvePath();
+    for (let i = 1; i < pts.length; i++) {
+      if (pts[i - 1].distanceTo(pts[i]) < 1e-5) continue;
+      path.add(new THREE.LineCurve3(pts[i - 1], pts[i]));
+    }
+    if (!path.curves.length) continue;
+    const tubular = Math.max(4, Math.round(path.getLength() / 0.3));
+    const geo = new THREE.TubeGeometry(path, Math.min(tubular, 800), TUBE_R, RADIAL, false);
+    geometries.push(geo);
+
+    // Add end caps (spheres at both ends)
+    const capS = new THREE.SphereGeometry(TUBE_R, RADIAL, RADIAL);
+    capS.translate(pts[0].x, pts[0].y, pts[0].z);
+    geometries.push(capS);
+    const capE = new THREE.SphereGeometry(TUBE_R, RADIAL, RADIAL);
+    const last = pts[pts.length - 1];
+    capE.translate(last.x, last.y, last.z);
+    geometries.push(capE);
+  }
+
+  state.zLift = savedLift;
+  return geometries;
+}
+
+function geometryToTriangles(geo) {
+  const pos = geo.attributes.position;
+  const idx = geo.index;
+  const tris = [];
+  if (idx) {
+    for (let i = 0; i < idx.count; i += 3) {
+      const a = idx.getX(i), b = idx.getX(i+1), c = idx.getX(i+2);
+      tris.push([
+        [pos.getX(a), pos.getY(a), pos.getZ(a)],
+        [pos.getX(b), pos.getY(b), pos.getZ(b)],
+        [pos.getX(c), pos.getY(c), pos.getZ(c)]
+      ]);
+    }
+  } else {
+    for (let i = 0; i < pos.count; i += 3) {
+      tris.push([
+        [pos.getX(i),   pos.getY(i),   pos.getZ(i)],
+        [pos.getX(i+1), pos.getY(i+1), pos.getZ(i+1)],
+        [pos.getX(i+2), pos.getY(i+2), pos.getZ(i+2)]
+      ]);
+    }
+  }
+  return tris;
+}
+
+function exportSTL(mode) {
+  if (!flatPoints.length) return;
+
+  // For 2D export: flat tube (zLift=0 but small base height so it's printable)
+  // For 3D export: use current zLift (clamped to at least a small value)
+  const zLift = mode === "2d" ? 0.05 : Math.max(state.zLift, 0.05);
+  const geometries = buildExportTubes(zLift);
+  if (!geometries.length) return;
+
+  // Collect all triangles
+  let allTris = [];
+  for (const g of geometries) {
+    allTris = allTris.concat(geometryToTriangles(g));
+    g.dispose();
+  }
+
+  // Scale up for 3D printing (units → mm, ~10x)
+  const SCALE = 10;
+  for (const tri of allTris) {
+    for (const v of tri) { v[0] *= SCALE; v[1] *= SCALE; v[2] *= SCALE; }
+  }
+
+  // Build binary STL
+  const numTris = allTris.length;
+  const bufLen = 84 + numTris * 50;
+  const buf = new ArrayBuffer(bufLen);
+  const dv = new DataView(buf);
+
+  // 80-byte header
+  const hdr = "KeyboardGeometry STL Export";
+  for (let i = 0; i < 80; i++) dv.setUint8(i, i < hdr.length ? hdr.charCodeAt(i) : 0);
+  // Triangle count
+  dv.setUint32(80, numTris, true);
+
+  let off = 84;
+  for (const tri of allTris) {
+    // Compute face normal
+    const [a, b, c] = tri;
+    const u = [b[0]-a[0], b[1]-a[1], b[2]-a[2]];
+    const v = [c[0]-a[0], c[1]-a[1], c[2]-a[2]];
+    const n = [
+      u[1]*v[2] - u[2]*v[1],
+      u[2]*v[0] - u[0]*v[2],
+      u[0]*v[1] - u[1]*v[0]
+    ];
+    const len = Math.sqrt(n[0]*n[0] + n[1]*n[1] + n[2]*n[2]) || 1;
+    // Normal
+    dv.setFloat32(off, n[0]/len, true); off += 4;
+    dv.setFloat32(off, n[1]/len, true); off += 4;
+    dv.setFloat32(off, n[2]/len, true); off += 4;
+    // 3 vertices
+    for (const vert of tri) {
+      dv.setFloat32(off, vert[0], true); off += 4;
+      dv.setFloat32(off, vert[1], true); off += 4;
+      dv.setFloat32(off, vert[2], true); off += 4;
+    }
+    // Attribute byte count
+    dv.setUint16(off, 0, true); off += 2;
+  }
+
+  // Download
+  const blob = new Blob([buf], { type: "application/octet-stream" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const word = state.text.replace(/[^a-zA-Z0-9]/g, "_").substring(0, 30) || "keyboard";
+  a.download = `${word}_${mode}.stl`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* ----------------------------------------------------------------
    6. APP — state, controls, master loop
    ---------------------------------------------------------------- */
 const state = {
@@ -1079,6 +1299,32 @@ $("btn3d").addEventListener("click", () => {
   dirty = true;
 });
 
+/* Export STL */
+$("btnStl").addEventListener("click", () => {
+  if (!flatPoints.length) return;
+  if (!three) init3D();
+  const mode = state.view3d ? "3d" : "2d";
+  exportSTL(mode);
+});
+
+/* Frame toggles */
+$("btnFrameFull").addEventListener("click", () => {
+  const el = $("frameFull");
+  const on = !el.classList.contains("visible");
+  el.classList.toggle("visible", on);
+  $("btnFrameFull").classList.toggle("on", on);
+  positionFrames();
+});
+$("btnFrameKb").addEventListener("click", () => {
+  const el = $("frameKb");
+  const on = !el.classList.contains("visible");
+  el.classList.toggle("visible", on);
+  workspace.classList.toggle("frame-kb-active", on);
+  $("btnFrameKb").classList.toggle("on", on);
+  // Wait for padding transition to settle, then position
+  setTimeout(positionFrames, 320);
+});
+
 /* Hide keyboard toggle */
 $("btnKb").addEventListener("click", () => {
   workspace.classList.toggle("hide-keys");
@@ -1167,8 +1413,64 @@ function layout() {
   workspace.style.minHeight = Math.round(STAGE_H * layout._baseScale) + "px";
   workspace.style.height = "auto";
   resize3D();
+  positionFrames();
 }
 layout._baseScale = 1;
+
+function positionFrames() {
+  // FULL: 16:9 frame tightly wrapping ALL content (title + controls + workspace)
+  const fullFrame = $("frameFull");
+  const mainEl = document.querySelector("main");
+  const mainRect = mainEl.getBoundingClientRect();
+  // Tight fit around actual content with minimal padding
+  const pad = 8;
+  const contentW = mainRect.width + pad * 2;
+  const contentH = mainRect.height + pad * 2;
+  const contentCx = mainRect.left + mainRect.width / 2;
+  const contentCy = mainRect.top + mainRect.height / 2;
+  let fw, fh;
+  // Expand the SMALLER dimension to meet 16:9
+  if (contentW / contentH > 16 / 9) {
+    // Content is wider than 16:9 — match width, grow height
+    fw = contentW; fh = fw * 9 / 16;
+  } else {
+    // Content is taller than 16:9 — match height, grow width
+    fh = contentH; fw = fh * 16 / 9;
+  }
+  fullFrame.style.width = fw + "px";
+  fullFrame.style.height = fh + "px";
+  fullFrame.style.left = (contentCx - fw / 2) + "px";
+  fullFrame.style.top = (contentCy - fh / 2) + "px";
+
+  // KEYBOARD: 16:9 frame around keyboard, spacebar near bottom, NEVER above workspace
+  const kbFrame = $("frameKb");
+  const wRect = workspace.getBoundingClientRect();
+  const scaleEl = $("stageScale");
+  const scaleRect = scaleEl.getBoundingClientRect();
+
+  const kbLeft = scaleRect.left - wRect.left;
+  const kbW = scaleRect.width;
+  const kbCx = kbLeft + kbW / 2;
+  const kbBottom = scaleRect.bottom - wRect.top;
+
+  const padLR = 32;
+  const padBot = 14;
+  const innerW = kbW + padLR * 2;
+  const innerH = innerW * 9 / 16;
+
+  // Anchor bottom below spacebar
+  const frameBottom = kbBottom + padBot;
+  let frameTop = frameBottom - innerH;
+
+  // CLAMP: never let the frame go above 8px from workspace top
+  if (frameTop < 8) frameTop = 8;
+  const clampedH = frameBottom - frameTop;
+
+  kbFrame.style.width = innerW + "px";
+  kbFrame.style.height = clampedH + "px";
+  kbFrame.style.left = (kbCx - innerW / 2) + "px";
+  kbFrame.style.top = frameTop + "px";
+}
 window.addEventListener("resize", layout);
 
 /* Master animation loop */
